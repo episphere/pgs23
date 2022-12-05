@@ -29,7 +29,7 @@ let PGS23 = { // a global variable that is not shared by export
 PGS23.loadPGS = async (i=4)=>{ // startng with a default pgs
     let div = PGS23.divPGS
     div.innerHTML=`<b style="color:maroon">A)</b> PGS # <input id="pgsID" value=${i} size=5> <button id='btLoadPgs'>load</button>
-    <span id="summarySpan" hidden=true>[<a id="urlPGS" href='' target="_blank">source</a>]<span id="largeFile"><input id="checkLargeFile"type="checkbox">large file</span><br><span id="trait_mapped">...</span>, <span id="dataRows">...</span> variants, [<a id="pubDOI" target="_blank">Pub</a>], [<a href="#" id="objJSON">JSON</a>].</span>
+    <span id="summarySpan" hidden=true>[<a id="urlPGS" href='' target="_blank">source</a>]<span id="largeFile"><input id="checkLargeFile"type="checkbox">large file</span><br><span id="trait_mapped">...</span>, <span id="dataRows">...</span> variants, [<a id="pubDOI" target="_blank">Reference</a>], [<a href="#" id="objJSON">JSON</a>].</span>
     <p><textarea id="pgsTextArea" style="background-color:black;color:lime" cols=60 rows=5>...</textarea></p>`;
     div.querySelector('#pgsID').onkeyup=(evt=>{
         if(evt.keyCode==13){
@@ -46,8 +46,11 @@ PGS23.loadPGS = async (i=4)=>{ // startng with a default pgs
         div.querySelector('#summarySpan').hidden=false
 		//check pgs file size
 		let fsize = (await fetch(`https://ftp.ebi.ac.uk/pub/databases/spot/pgs/scores/${PGSstr}/ScoringFiles/Harmonized/${PGSstr}_hmPOS_GRCh37.txt.gz`,{method:'HEAD'})).headers.get('Content-Length');
-		if(fsize>10000000){
-			PGS23.pgsTextArea.value+=` ... whoa! ... this is a large PGS entry, over ${Math.floor(fsize/1000000)}Mb, \n\nIf you still want to process it please check "large file" above and press load again.`
+		if(fsize>1000000){
+			div.querySelector('#summarySpan').hidden=true
+			let data = document.getElementById("PGS23calc").PGS23data
+			if(data.pgs){delete data.pgs}
+			PGS23.pgsTextArea.value+=` ... whoa! ... this is a large PGS entry, over ${Math.floor(fsize/1000000)}Mb, \n\nIf you still want to process it please check "large file" above and press load again. Don't do this if you are not ready to wait ...`
 			div.querySelector('#largeFile').style.backgroundColor='yellow'
 			div.querySelector('#largeFile').style.color='red'
 			setTimeout(_=>{
@@ -147,18 +150,19 @@ PGS23.loadCalc = async ()=>{
 	div.innerHTML=`<hr>
 	<b style="color:maroon">C)</b> Risk calculation.
 	<p><button id="buttonCalculateRisk">Calculate Risk</button><span id="hidenCalc" hidden=true>
-	[matches][calculation]</span>
+	[<a href="#" id="matchesJSON">matches</a>][<a href="#" id="riskCalcJSON">calculation</a>]</span> <input id="progressCalc" type="range" value=0 hidden=false>
     </p>
 	<textarea id="my23CalcTextArea" style="background-color:black;color:lime" cols=60 rows=5>...</textarea>
 	<p>If you want to see the current state of the two data objects try <code>data = document.getElementById("PGS23calc").PGS23data</code> in the browser console</p>`
+	div.querySelector('#matchesJSON').onclick=evt=>{
+		let data = document.getElementById("PGS23calc").PGS23data
+		saveFile(JSON.stringify(data.pgsMatchMy23),data.my23.info.slice(0,-4)+'_match_PGS_'+data.pgs.id+'.json')
+	}
 	div.querySelector('#buttonCalculateRisk').onclick=evt=>{
 		let hidenCalc=div.querySelector('#hidenCalc')
 		let my23TextArea = div.querySelector('#my23CalcTextArea')
 		my23CalcTextArea.value = '...'
 		hidenCalc.hidden=true
-		document.querySelector('#buttonCalculateRisk').disabled=true
-		document.querySelector('#buttonCalculateRisk').style.color='silver'
-		//div.querySelector('#buttonCalculateRisk')
 		let data = document.getElementById("PGS23calc").PGS23data
 		if(!data.pgs){
 			my23CalcTextArea.value+='\n... no PGS entry selected, please do that in A.'
@@ -168,8 +172,12 @@ PGS23.loadCalc = async ()=>{
 		}
 		if((!!data.my23)&(!!data.pgs)){
 			my23CalcTextArea.value=` ... looking for matches amongst the ${data.my23.dt.length} mutations targeted by 23andMe, for the reference ${data.pgs.dt.length} mutations reported in PGS#${data.pgs.id}, putatively associated with ${data.pgs.meta.trait_mapped} ...`
+			document.querySelector('#buttonCalculateRisk').disabled=true
+			document.querySelector('#buttonCalculateRisk').style.color='silver'
+			data.pgsMatchMy23=[]
 			setTimeout(_=>{
-				PGS23.Calc(data)
+				//PGS23.Match(data,progressCalc)
+				PGS23.Match(data)
 				my23CalcTextArea.value+=`\n ... ${data.pgsMatchMy23.length} found!`
 				hidenCalc.hidden=false
 				document.querySelector('#buttonCalculateRisk').disabled=false
@@ -182,7 +190,7 @@ PGS23.loadCalc = async ()=>{
 	}
 }
 
-PGS23.Calc = function (data){
+PGS23.Match = function (data,progressReport){
 	// extract harmonized data from PGS entry first
 	const indChr = data.pgs.cols.indexOf('hm_chr')
 	const indPos = data.pgs.cols.indexOf('hm_pos')
@@ -190,15 +198,42 @@ PGS23.Calc = function (data){
 	let dtMatch=[]
 	const cgrInd = data.pgs.cols.indexOf('hm_chr')
 	const posInd = data.pgs.cols.indexOf('hm_pos')
+	const n = data.pgs.dt.length
 	data.pgs.dt.forEach((r,i)=>{
 		let dtMatch_i=data.my23.dt.filter(myr=>(myr[2]==r[indPos])).filter(myr=>(myr[1]==r[indChr]))
 		if(dtMatch_i.length>0){
 			dtMatch.push(dtMatch_i.concat([r]))
-			//debugger
 		}
-		//debugger
+		//console.log(i/n)
 	})
 	data.pgsMatchMy23=dtMatch
+	let calcRisk =[]
+	// calculate Risk
+	let logR=0 // log(0)=1
+	let ind_effect_allele=data.pgs.cols.indexOf('effect_allele')
+	let ind_other_allele=data.pgs.cols.indexOf('other_allele')
+	let ind_effect_weight=data.pgs.cols.indexOf('effect_weight')
+	let ind_allelefrequency_effect=data.pgs.cols.indexOf('allelefrequency_effect')
+	dtMatch.forEach((m,i)=>{
+		calcRisk[i]=0 // default no risk
+		let mi = m[0][3].match(/^[ACGT]{2}$/) // we'll only consider duplets in the 23adme report
+		if(mi){
+			//'effect_allele', 'other_allele', 'effect_weight'
+			mi=mi[0] // 23andme match
+			let pi=m.at(-1) //pgs match
+			let alele=pi[ind_effect_allele]
+			let L = mi.match(RegExp(alele,'g')) // how many, 0,1, or 2
+			if(L){
+				L=L.length
+				calcRisk[i]=L*pi[ind_effect_weight]
+			}
+			//debugger
+		}
+	})
+	data.calcRisk=calcRisk
+	data.riskScore = calcRisk.reduce((a,b)=>a+b)
+	
+	//debugger
 }
 
 function ui(targetDiv=document.body){ // target div for the user interface
@@ -212,10 +247,7 @@ function ui(targetDiv=document.body){ // target div for the user interface
     div.id='prsCalcUI'
     div.innerHTML=`
     <p>
-    Individual risk calculation for 23andme reports based on <a href='https://www.pgscatalog.org' target="_blank">PGS Catalog</a>.
-    See also this project's [<a href="https://github.com/episphere/app/tree/main/jonas/prs" target="_blank">code</a>][<a href="https://observablehq.com/@episphere/pgs" target="_blank">notebook</a>][<a href="https://gitter.im/episphere/PRS">discussion</a>].
-    </p><p>
-	Below you can select, and inspect, <b style="color:maroon">A)</b> the PGS catalog entry with the risk scores for a list of genomic variations; and <b style="color:maroon">B)</b> Your 23andMe <a href="https://you.23andme.com/tools/data/download" target="_blank">data download</a>. Once you have both (A) and (B), you can proceed to <b style="color:maroon">C)</b> calculate your relative risk for the trait targetted by the PGS entry.
+	Below you can select, and inspect, <b style="color:maroon">A)</b> the <a href='https://www.pgscatalog.org' target="_blank">PGS Catalog</a> entries with risk scores for a list of genomic variations; and <b style="color:maroon">B)</b> Your 23andMe <a href="https://you.23andme.com/tools/data/download" target="_blank">data download</a>. Once you have both (A) and (B), you can proceed to <b style="color:maroon">C)</b> calculate your polygenic risk for the trait targetted by the PGS entry.
     </p>
     <hr>
     `
@@ -310,5 +342,6 @@ function saveFile(x,fileName) { // x is the content of the file
 export{
     ui,
     PGS23,
-    parsePGS
+    parsePGS,
+	parse23
 }
