@@ -1,0 +1,58 @@
+:root {
+    --color:navy;
+    --family:sans-serif;
+}
+
+body {
+    font-family:var(--family);
+    margin:2.5em;
+    color:var(--color)
+}
+
+h1 {
+    color:maroon
+}
+
+h2 {
+    color:brown
+}
+
+h3 {
+    color:darkgreen
+}
+
+a {
+    color:blue
+}
+
+a:hover {
+    color:green;
+    background-color:yellow;
+}
+
+.link:hover {
+    background-color:yellow;
+    cursor:pointer;
+}
+
+p {
+  margin-bottom: 1em;
+  line-height: 1.4em;
+}
+
+code {
+  color:darkgreen;
+  font-family:var(--family);
+  font-style: italic;
+}
+
+button {
+  border-radius: 10px;
+  font-size:medium;
+  color:blue;
+}
+
+button:hover {
+   background-color:yellow;
+   cursor:pointer;
+}
