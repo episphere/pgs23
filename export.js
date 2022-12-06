@@ -231,8 +231,8 @@ PGS23.Match = function (data,progressReport){
 		}
 	})
 	data.calcRisk=calcRisk
-	data.riskScore = calcRisk.reduce((a,b)=>a+b)
-	
+	data.riskScore = Math.exp(calcRisk.reduce((a,b)=>a+b)
+	document.getElementById('my23CalcTextArea').value+=`risk=${data.riskScore} from`
 	//debugger
 }
 
