@@ -1,5 +1,5 @@
 <hr><h1>
-PGS23 <sup style="font-size:medium">[<a href="https://github.com/episphere/app/tree/main/jonas/prs" target="_blank">code</a>][<a href="https://observablehq.com/@episphere/pgs" target="_blank">notebook</a>][<a href="https://gitter.im/episphere/PRS">discussion</a>]</sup>
+PGS23 <sup style="font-size:medium">[<a href="https://github.com/episphere/pgs23" target="_blank">code</a>][<a href="https://observablehq.com/@episphere/pgs" target="_blank">notebook</a>][<a href="https://gitter.im/episphere/PRS">discussion</a>]</sup>
 <br><span style="font-size:medium;color:navy;font-weight:normal">Individual polygenic risk calculation for 23andme reports based on <a href='https://www.pgscatalog.org' target="_blank">PGS Catalog</a>.</span>
 </h1><hr>
 
@@ -8,8 +8,8 @@ PGS23 <sup style="font-size:medium">[<a href="https://github.com/episphere/app/t
 <link href="app.css" rel="stylesheet">
 <script>
     (async ()=>{
-        pgs23 = await import('http://localhost:8000/pgs23/export.js')
-        //pgs23 = await import('https://episphere.github.io/pgs23/export.js')
+        //pgs23 = await import('http://localhost:8000/pgs23/export.js')
+        pgs23 = await import('https://episphere.github.io/pgs23/export.js')
         pgs23.ui()
     })() 
 </script>

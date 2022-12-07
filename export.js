@@ -150,13 +150,17 @@ PGS23.loadCalc = async ()=>{
 	div.innerHTML=`<hr>
 	<b style="color:maroon">C)</b> Risk calculation.
 	<p><button id="buttonCalculateRisk">Calculate Risk</button><span id="hidenCalc" hidden=true>
-	[<a href="#" id="matchesJSON">matches</a>][<a href="#" id="riskCalcJSON">calculation</a>]</span> <input id="progressCalc" type="range" value=0 hidden=false>
+	[<a href="#" id="matchesJSON">matches</a>][<a href="#" id="riskCalcScoreJSON">calculation</a>]</span> <input id="progressCalc" type="range" value=0 hidden=false>
     </p>
 	<textarea id="my23CalcTextArea" style="background-color:black;color:lime" cols=60 rows=5>...</textarea>
 	<p>If you want to see the current state of the two data objects try <code>data = document.getElementById("PGS23calc").PGS23data</code> in the browser console</p>`
 	div.querySelector('#matchesJSON').onclick=evt=>{
 		let data = document.getElementById("PGS23calc").PGS23data
-		saveFile(JSON.stringify(data.pgsMatchMy23),data.my23.info.slice(0,-4)+'_match_PGS_'+data.pgs.id+'.json')
+		saveFile(JSON.stringify(data.pgsMatchMy23),data.my23.info.slice(0,-4)+'_match_PGS_calcRiskScore'+data.pgs.id+'.json')
+	}
+	div.querySelector('#riskCalcScoreJSON').onclick=evt=>{
+		let data = document.getElementById("PGS23calc").PGS23data
+		saveFile(JSON.stringify(data.calcRiskScore),data.my23.info.slice(0,-4)+'_individual_RiskScores'+data.pgs.id+'.json')
 	}
 	div.querySelector('#buttonCalculateRisk').onclick=evt=>{
 		let hidenCalc=div.querySelector('#hidenCalc')
@@ -171,14 +175,14 @@ PGS23.loadCalc = async ()=>{
 			my23CalcTextArea.value+='\n... no 23andme report provided, please do that in B.'
 		}
 		if((!!data.my23)&(!!data.pgs)){
-			my23CalcTextArea.value=` ... looking for matches amongst the ${data.my23.dt.length} mutations targeted by 23andMe, for the reference ${data.pgs.dt.length} mutations reported in PGS#${data.pgs.id}, putatively associated with ${data.pgs.meta.trait_mapped} ...`
+			my23CalcTextArea.value=`... looking for matches amongst the ${data.my23.dt.length} mutations targeted by 23andMe, for the reference ${data.pgs.dt.length} mutations reported in PGS#${data.pgs.id}, putatively associated with ${data.pgs.meta.trait_mapped}. \n...`
 			document.querySelector('#buttonCalculateRisk').disabled=true
 			document.querySelector('#buttonCalculateRisk').style.color='silver'
 			data.pgsMatchMy23=[]
 			setTimeout(_=>{
 				//PGS23.Match(data,progressCalc)
 				PGS23.Match(data)
-				my23CalcTextArea.value+=`\n ... ${data.pgsMatchMy23.length} found!`
+				my23CalcTextArea.value+=` ${data.pgsMatchMy23.length} PGS matches to the 23andme report.`
 				hidenCalc.hidden=false
 				document.querySelector('#buttonCalculateRisk').disabled=false
 				document.querySelector('#buttonCalculateRisk').style.color='blue'
@@ -207,7 +211,7 @@ PGS23.Match = function (data,progressReport){
 		//console.log(i/n)
 	})
 	data.pgsMatchMy23=dtMatch
-	let calcRisk =[]
+	let calcRiskScore =[]
 	// calculate Risk
 	let logR=0 // log(0)=1
 	let ind_effect_allele=data.pgs.cols.indexOf('effect_allele')
@@ -215,7 +219,7 @@ PGS23.Match = function (data,progressReport){
 	let ind_effect_weight=data.pgs.cols.indexOf('effect_weight')
 	let ind_allelefrequency_effect=data.pgs.cols.indexOf('allelefrequency_effect')
 	dtMatch.forEach((m,i)=>{
-		calcRisk[i]=0 // default no risk
+		calcRiskScore[i]=0 // default no risk
 		let mi = m[0][3].match(/^[ACGT]{2}$/) // we'll only consider duplets in the 23adme report
 		if(mi){
 			//'effect_allele', 'other_allele', 'effect_weight'
@@ -225,14 +229,14 @@ PGS23.Match = function (data,progressReport){
 			let L = mi.match(RegExp(alele,'g')) // how many, 0,1, or 2
 			if(L){
 				L=L.length
-				calcRisk[i]=L*pi[ind_effect_weight]
+				calcRiskScore[i]=L*pi[ind_effect_weight]
 			}
 			//debugger
 		}
 	})
-	data.calcRisk=calcRisk
-	data.riskScore = Math.exp(calcRisk.reduce((a,b)=>a+b))
-	document.getElementById('my23CalcTextArea').value+=`risk=${data.riskScore} from`
+	data.calcRiskScore=calcRiskScore
+	data.risk = Math.exp(calcRiskScore.reduce((a,b)=>a+b))
+	document.getElementById('my23CalcTextArea').value+=` risk=${Math.round(data.risk*1000)/1000}, calculated from`
 	//debugger
 }
 
