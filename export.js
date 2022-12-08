@@ -15,6 +15,11 @@ if(typeof(JSZip)=='undefined'){
     document.head.appendChild(s)
 }
 
+if(typeof(Plotly)=='undefined'){
+    let s = document.createElement('script')
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/plotly.js/1.33.1/plotly.min.js'
+    document.head.appendChild(s)
+}
 
 
 // pgs is now in the global scope, if it was not there already
@@ -153,7 +158,9 @@ PGS23.loadCalc = async ()=>{
 	[<a href="#" id="matchesJSON">matches</a>][<a href="#" id="riskCalcScoreJSON">calculation</a>]</span> <input id="progressCalc" type="range" value=0 hidden=false>
     </p>
 	<textarea id="my23CalcTextArea" style="background-color:black;color:lime" cols=60 rows=5>...</textarea>
-	<p>If you want to see the current state of the two data objects try <code>data = document.getElementById("PGS23calc").PGS23data</code> in the browser console</p>`
+	<p>If you want to see the current state of the two data objects try <code>data = document.getElementById("PGS23calc").PGS23data</code> in the browser console</p>
+	<div id="plotRiskDiv"></div>`
+	
 	div.querySelector('#matchesJSON').onclick=evt=>{
 		let data = document.getElementById("PGS23calc").PGS23data
 		saveFile(JSON.stringify(data.pgsMatchMy23),data.my23.info.slice(0,-4)+'_match_PGS_calcRiskScore'+data.pgs.id+'.json')
@@ -236,7 +243,7 @@ PGS23.Match = function (data,progressReport){
 	})
 	data.calcRiskScore=calcRiskScore
 	data.risk = Math.exp(calcRiskScore.reduce((a,b)=>a+b))
-	document.getElementById('my23CalcTextArea').value+=` risk=${Math.round(data.risk*1000)/1000}, calculated from`
+	document.getElementById('my23CalcTextArea').value+=` Polygenic Risk Score, PRS=${Math.round(data.risk*1000)/1000}, calculated from`
 	//debugger
 }
 
