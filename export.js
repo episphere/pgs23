@@ -186,21 +186,12 @@ PGS23.loadCalc = async ()=>{
 			document.querySelector('#buttonCalculateRisk').disabled=true
 			document.querySelector('#buttonCalculateRisk').style.color='silver'
 			data.pgsMatchMy23=[]
-			setTimeout(_=>{
-				//PGS23.Match(data,progressCalc)
-				PGS23.Match(data)
-				my23CalcTextArea.value+=` ${data.pgsMatchMy23.length} PGS matches to the 23andme report.`
-				hidenCalc.hidden=false
-				document.querySelector('#buttonCalculateRisk').disabled=false
-				document.querySelector('#buttonCalculateRisk').style.color='blue'
-			},100)
+			PGS23.Match2(data)
 		}
-		
-		
-		//debugger
 	}
 }
 
+/*
 PGS23.Match = function (data,progressReport){
 	// extract harmonized data from PGS entry first
 	const indChr = data.pgs.cols.indexOf('hm_chr')
@@ -245,6 +236,82 @@ PGS23.Match = function (data,progressReport){
 	data.risk = Math.exp(calcRiskScore.reduce((a,b)=>a+b))
 	document.getElementById('my23CalcTextArea').value+=` Polygenic Risk Score, PRS=${Math.round(data.risk*1000)/1000}, calculated from`
 	//debugger
+}
+*/
+
+PGS23.Match2 = function (data,progressReport){
+	// extract harmonized data from PGS entry first
+	const indChr = data.pgs.cols.indexOf('hm_chr')
+	const indPos = data.pgs.cols.indexOf('hm_pos')
+	// match
+	let dtMatch=[]
+	const cgrInd = data.pgs.cols.indexOf('hm_chr')
+	const posInd = data.pgs.cols.indexOf('hm_pos')
+	const n = data.pgs.dt.length
+	let progressCalc = document.getElementById('progressCalc')
+	progressCalc.hidden=false
+	let i=0
+	function funMatch(i=0){
+		if(i<n){
+			let r = data.pgs.dt[i]
+			let dtMatch_i=data.my23.dt.filter(myr=>(myr[2]==r[indPos])).filter(myr=>(myr[1]==r[indChr]))
+			if(dtMatch_i.length>0){
+				dtMatch.push(dtMatch_i.concat([r]))
+			}
+			progressCalc.value=100*i/n
+			setTimeout(()=>{
+				funMatch(i+1)
+			},0)
+		}else{
+			data.pgsMatchMy23=dtMatch
+			let calcRiskScore =[]
+			// calculate Risk
+			let logR=0 // log(0)=1
+			let ind_effect_allele=data.pgs.cols.indexOf('effect_allele')
+			let ind_other_allele=data.pgs.cols.indexOf('other_allele')
+			let ind_effect_weight=data.pgs.cols.indexOf('effect_weight')
+			let ind_allelefrequency_effect=data.pgs.cols.indexOf('allelefrequency_effect')
+			dtMatch.forEach((m,i)=>{
+				calcRiskScore[i]=0 // default no risk
+				let mi = m[0][3].match(/^[ACGT]{2}$/) // we'll only consider duplets in the 23adme report
+				if(mi){
+					//'effect_allele', 'other_allele', 'effect_weight'
+					mi=mi[0] // 23andme match
+					let pi=m.at(-1) //pgs match
+					let alele=pi[ind_effect_allele]
+					let L = mi.match(RegExp(alele,'g')) // how many, 0,1, or 2
+					if(L){
+						L=L.length
+						calcRiskScore[i]=L*pi[ind_effect_weight]
+					}
+					//debugger
+				}
+			})
+			data.calcRiskScore=calcRiskScore
+			data.risk = Math.exp(calcRiskScore.reduce((a,b)=>a+b))
+			document.getElementById('my23CalcTextArea').value+=` Polygenic Risk Score, PRS=${Math.round(data.risk*1000)/1000}, calculated from ${data.pgsMatchMy23.length} PGS matches to the 23andme report.`
+			//my23CalcTextArea.value+=` ${data.pgsMatchMy23.length} PGS matches to the 23andme report.`
+			
+			hidenCalc.hidden=false
+			document.querySelector('#buttonCalculateRisk').disabled=false
+			document.querySelector('#buttonCalculateRisk').style.color='blue'
+			
+			//debugger
+		}
+			
+	}
+	funMatch()
+	
+	/*
+	data.pgs.dt.forEach((r,i)=>{
+		let dtMatch_i=data.my23.dt.filter(myr=>(myr[2]==r[indPos])).filter(myr=>(myr[1]==r[indChr]))
+		if(dtMatch_i.length>0){
+			dtMatch.push(dtMatch_i.concat([r]))
+		}
+		//console.log(i/n)
+	})
+	 */
+			
 }
 
 function ui(targetDiv=document.body){ // target div for the user interface
