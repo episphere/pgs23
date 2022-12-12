@@ -34,7 +34,7 @@ PGS23.loadPGS = async(i=4)=>{
     // startng with a default pgs
     let div = PGS23.divPGS
     div.innerHTML = `<b style="color:maroon">A)</b> PGS # <input id="pgsID" value=${i} size=5> <button id='btLoadPgs'>load</button><span id="showLargeFile" hidden=true><input id="checkLargeFile"type="checkbox">large file (under development)</span> 
-    <span id="summarySpan" hidden=true>[<a id="urlPGS" href='' target="_blank">source</a>]<span id="largeFile"></span><br><span id="trait_mapped">...</span>, <span id="dataRows">...</span> variants, [<a id="pubDOI" target="_blank">Reference</a>], [<a href="#" id="objJSON">JSON</a>].</span>
+    <span id="summarySpan" hidden=true>[<a id="urlPGS" href='' target="_blank">FTP</a>][<a id="catalogEntry" href="https://www.pgscatalog.org/score/${"PGS000000".slice(0, -JSON.stringify(i).length) + JSON.stringify(i)}" target="_blank">catalog</a>]<span id="largeFile"></span><br><span id="trait_mapped">...</span>, <span id="dataRows">...</span> variants, [<a id="pubDOI" target="_blank">Reference</a>], [<a href="#" id="objJSON">JSON</a>].</span>
     <p><textarea id="pgsTextArea" style="background-color:black;color:lime" cols=60 rows=5>...</textarea></p>`;
     div.querySelector('#pgsID').onkeyup = (evt=>{
         if (evt.keyCode == 13) {
@@ -176,7 +176,7 @@ PGS23.loadCalc = async()=>{
 	[<a href="#" id="matchesJSON">matches</a>][<a href="#" id="riskCalcScoreJSON">calculation</a>]</span> <input id="progressCalc" type="range" value=0 hidden=false>
     </p>
 	<textarea id="my23CalcTextArea" style="background-color:black;color:lime" cols=60 rows=5>...</textarea>
-	<div id="plotRiskDiv"><div id="plotAllMatchByPosDiv">...</div></div>
+	<div id="plotRiskDiv"><div id="plotAllMatchByPosDiv">...</div><div id="plotAllMatchByEffectDiv">...</div></div>
 	<p>If you want to see the current state of the two data objects try <code>data = document.getElementById("PGS23calc").PGS23data</code> in the browser console</p>
 	`
 
@@ -330,6 +330,7 @@ PGS23.Match2 = function(data, progressReport) {
 
             //ploting
             plotAllMatchByPos()
+			plotAllMatchByEffect()
         }
 
     }
@@ -478,7 +479,10 @@ function plotAllMatchByPos(data=PGS23.data, div=document.getElementById('plotAll
 	div.style.height='500px'
     const indChr = data.pgs.cols.indexOf('hm_chr')
     const indPos = data.pgs.cols.indexOf('hm_pos')
-	const indOther_allele = data.pgs.cols.indexOf('other_allele')
+	let indOther_allele = data.pgs.cols.indexOf('other_allele')
+	if(indOther_allele==-1){
+		indOther_allele = data.pgs.cols.indexOf('hm_inferOtherAllele')
+	}
 	const indEffect_allele = data.pgs.cols.indexOf('effect_allele')
 	const x = data.pgsMatchMy23.map(xi=>{
         return `Chr${xi.at(-1)[indChr]}.${xi.at(-1)[indPos]}:${xi.at(-1)[indOther_allele]}>${xi.at(-1)[indEffect_allele]}
@@ -509,7 +513,7 @@ function plotAllMatchByPos(data=PGS23.data, div=document.getElementById('plotAll
 		title:`<i style="color:navy">${data.pgs.meta.trait_mapped} (PGP#${data.pgs.meta.pgs_id.replace(/^.*0+/,'')}), PRS ${Math.round(data.PRS*1000)/1000}</i>
 			  <br><a href="${'https://doi.org/' + PGS23.pgsObj.meta.citation.match(/doi\:.*$/)[0]}" target="_blank"style="font-size:x-small">${data.pgs.meta.citation}</a>`,
 		xaxis:{
-			title:'variant #',
+			title:'variant sorted by chromossome and position',
 			linewidth: 1,
 			mirror: true,
 			rangemode: "tozero"
@@ -520,7 +524,66 @@ function plotAllMatchByPos(data=PGS23.data, div=document.getElementById('plotAll
 			mirror: true
 		}
 	})
-    debugger
+    //debugger
 }
 
-export {ui, PGS23, parsePGS, parse23, plotAllMatchByPos}
+function plotAllMatchByEffect(data=PGS23.data, div=document.getElementById('plotAllMatchByEffectDiv')) {
+	div.style.height='500px'
+    const indChr = data.pgs.cols.indexOf('hm_chr')
+    const indPos = data.pgs.cols.indexOf('hm_pos')
+	let indOther_allele = data.pgs.cols.indexOf('other_allele')
+	if(indOther_allele==-1){
+		indOther_allele = data.pgs.cols.indexOf('hm_inferOtherAllele')
+	}
+	const indEffect_allele = data.pgs.cols.indexOf('effect_allele')
+	// sort by effect
+	let jj = [...Array(data.calcRiskScore.length)].map((_,i)=>i)  // match indexes
+	jj.sort((a,b)=>(data.calcRiskScore[a]-data.calcRiskScore[b]))
+	const x = data.pgsMatchMy23.map(xi=>{
+		return `Chr${xi.at(-1)[indChr]}.${xi.at(-1)[indPos]}:${xi.at(-1)[indOther_allele]}>${xi.at(-1)[indEffect_allele]}
+		<br> <a href="#" target="_blank">${xi[0][0]}</a>`
+    })
+    const y = data.calcRiskScore
+    const z = data.aleles
+    const ii = [...Array(y.length)].map((_,i)=>i + 1)
+    let trace0 = {
+        x: ii,
+        y: y.map((yi,i)=>y[jj[i]]),
+		mode: 'lines+markers',
+		type: 'scatter',
+		text: x,
+		marker: { 
+			size: 6,
+			color:'navy',
+			line:{
+				color:'navy',
+				width:1
+			}
+		},
+		line:{
+			color:'navy'
+		}
+		
+    }
+    div.innerHTML = ''
+    Plotly.newPlot(div, [trace0],{
+		//title:`${data.pgs.meta.trait_mapped}, PRS ${Math.round(data.PRS*1000)/1000}`
+		title:`<i style="color:navy">${data.pgs.meta.trait_mapped} (PGP#${data.pgs.meta.pgs_id.replace(/^.*0+/,'')}), PRS ${Math.round(data.PRS*1000)/1000}</i>
+			  <br><a href="${'https://doi.org/' + PGS23.pgsObj.meta.citation.match(/doi\:.*$/)[0]}" target="_blank"style="font-size:x-small">${data.pgs.meta.citation}</a>`,
+		xaxis:{
+			title:'variant sorted by effect',
+			linewidth: 1,
+			mirror: true,
+			rangemode: "tozero"
+		},
+		yaxis:{
+			title:'log<sub>E</sub>(β)',
+			linewidth: 1,
+			mirror: true
+		}
+	})
+    //debugger
+}
+
+
+export {ui, PGS23, parsePGS, parse23, plotAllMatchByPos,plotAllMatchByEffect}
