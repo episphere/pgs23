@@ -252,8 +252,8 @@ PGS23.Match = function (data,progressReport){
 		}
 	})
 	data.calcRiskScore=calcRiskScore
-	data.risk = Math.exp(calcRiskScore.reduce((a,b)=>a+b))
-	document.getElementById('my23CalcTextArea').value+=` Polygenic Risk Score, PRS=${Math.round(data.risk*1000)/1000}, calculated from`
+	data.PRS = Math.exp(calcRiskScore.reduce((a,b)=>a+b))
+	document.getElementById('my23CalcTextArea').value+=` Polygenic Risk Score, PRS=${Math.round(data.PRS*1000)/1000}, calculated from`
 	//debugger
 }
 */
@@ -320,8 +320,8 @@ PGS23.Match2 = function(data, progressReport) {
             )
             data.aleles = aleles
             data.calcRiskScore = calcRiskScore
-            data.risk = Math.exp(calcRiskScore.reduce((a,b)=>a + b))
-            document.getElementById('my23CalcTextArea').value += ` Polygenic Risk Score, PRS=${Math.round(data.risk * 1000) / 1000}, calculated from ${data.pgsMatchMy23.length} PGS matches to the 23andme report.`
+            data.PRS = Math.exp(calcRiskScore.reduce((a,b)=>a + b))
+            document.getElementById('my23CalcTextArea').value += ` Polygenic Risk Score, PRS=${Math.round(data.PRS * 1000) / 1000}, calculated from ${data.pgsMatchMy23.length} PGS matches to the 23andme report.`
             //my23CalcTextArea.value+=` ${data.pgsMatchMy23.length} PGS matches to the 23andme report.`
 
             hidenCalc.hidden = false
@@ -481,7 +481,8 @@ function plotAllMatchByPos(data=PGS23.data, div=document.getElementById('plotAll
 	const indOther_allele = data.pgs.cols.indexOf('other_allele')
 	const indEffect_allele = data.pgs.cols.indexOf('effect_allele')
 	const x = data.pgsMatchMy23.map(xi=>{
-        return `${xi.at(-1)[indChr]}.${xi.at(-1)[indPos]}:${xi.at(-1)[indOther_allele]}>${xi.at(-1)[indEffect_allele]}`
+        return `Chr${xi.at(-1)[indChr]}.${xi.at(-1)[indPos]}:${xi.at(-1)[indOther_allele]}>${xi.at(-1)[indEffect_allele]}
+		<br> <a href="#" target="_blank">${xi[0][0]}</a>`
     }
     )
     const y = data.calcRiskScore
@@ -489,10 +490,36 @@ function plotAllMatchByPos(data=PGS23.data, div=document.getElementById('plotAll
     const ii = [...Array(y.length)].map((_,i)=>i + 1)
     let trace0 = {
         x: ii,
-        y: y
+        y: y,
+		mode: 'markers',
+		type: 'scatter',
+		text: x,
+		marker: { 
+			size: 8,
+			color:'rgba(0,0,0,0)',
+			line:{
+				color:'navy',
+				width:1
+			}
+				}
     }
     div.innerHTML = ''
-    Plotly.newPlot(div, [trace0])
+    Plotly.newPlot(div, [trace0],{
+		//title:`${data.pgs.meta.trait_mapped}, PRS ${Math.round(data.PRS*1000)/1000}`
+		title:`<i style="color:navy">${data.pgs.meta.trait_mapped} (PGP#${data.pgs.meta.pgs_id.replace(/^.*0+/,'')}), PRS ${Math.round(data.PRS*1000)/1000}</i>
+			  <br><a href="${'https://doi.org/' + PGS23.pgsObj.meta.citation.match(/doi\:.*$/)[0]}" target="_blank"style="font-size:x-small">${data.pgs.meta.citation}</a>`,
+		xaxis:{
+			title:'variant #',
+			linewidth: 1,
+			mirror: true,
+			rangemode: "tozero"
+		},
+		yaxis:{
+			title:'log<sub>E</sub>(β)',
+			linewidth: 1,
+			mirror: true
+		}
+	})
     debugger
 }
 
