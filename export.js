@@ -177,7 +177,8 @@ PGS23.loadCalc = async()=>{
     </p>
 	<textarea id="my23CalcTextArea" style="background-color:black;color:lime" cols=60 rows=5>...</textarea>
 	<div id="plotRiskDiv"><div id="plotAllMatchByPosDiv">...</div><div id="plotAllMatchByEffectDiv">...</div></div>
-	<p>If you want to see the current state of the two data objects try <code>data = document.getElementById("PGS23calc").PGS23data</code> in the browser console</p>
+	<div>If you want to see the current state of the two data objects try <code>data = document.getElementById("PGS23calc").PGS23data</code> in the browser console</div>
+	<div id="tabulateAllMatchByEffectDiv"></div>
 	`
 
     div.querySelector('#matchesJSON').onclick = evt=>{
@@ -319,14 +320,17 @@ PGS23.Match2 = function(data, progressReport) {
             }
             )
             data.aleles = aleles
-			if(calcRiskScore.reduce((a,b)=>Math.min(a,b))==0){
+			data.calcRiskScore = calcRiskScore
+			if(calcRiskScore.reduce((a,b)=>Math.min(a,b))==0){ // hazard ratios?
 				console.log('these are not betas :-(')
-				document.getElementById('my23CalcTextArea').value = `these are not betas ... try another entry. Maybe https://www.pgscatalog.org/search/?q=${data.pgs.meta.trait_mapped.replace(' ','+')} will help.`
+				document.getElementById('my23CalcTextArea').value += ` Found ${data.pgsMatchMy23.length} PGS matches to the 23andme report.`
+				document.getElementById('my23CalcTextArea').value += ` However, these don't look like betas. I am going to assume they are hazard ratios ... You could also look for another entry for the same trait where betas were calculated, maybe give it a try at https://www.pgscatalog.org/search/?q=${data.pgs.meta.trait_mapped.replace(' ','+')}.`
 				document.getElementById('plotRiskDiv').hidden=true
-				document.getElementById('hidenCalc').hidden=true
+				document.getElementById('hidenCalc').hidden=false
+				plotHazardAllMatchByPos()
+				plotHazardAllMatchByEffect()
 			}else{
-				data.calcRiskScore = calcRiskScore
-	            data.PRS = Math.exp(calcRiskScore.reduce((a,b)=>a + b))
+				data.PRS = Math.exp(calcRiskScore.reduce((a,b)=>a + b))
 	            document.getElementById('my23CalcTextArea').value += ` Polygenic Risk Score, PRS=${Math.round(data.PRS * 1000) / 1000}, calculated from ${data.pgsMatchMy23.length} PGS matches to the 23andme report.`
 	            //my23CalcTextArea.value+=` ${data.pgsMatchMy23.length} PGS matches to the 23andme report.`
 				document.getElementById('plotRiskDiv').hidden=false
@@ -525,7 +529,7 @@ function plotAllMatchByPos(data=PGS23.data, div=document.getElementById('plotAll
 			rangemode: "tozero"
 		},
 		yaxis:{
-			title:'log<sub>E</sub>(β)',
+			title:'<span style="font-size:large">βz</span>, where <span style="font-size:small">PRS = exp(Σ β<sup>.</sup>z)</span>',
 			linewidth: 1,
 			mirror: true
 		}
@@ -583,13 +587,171 @@ function plotAllMatchByEffect(data=PGS23.data, div=document.getElementById('plot
 			rangemode: "tozero"
 		},
 		yaxis:{
-			title:'log<sub>E</sub>(β)',
+			title:'<span style="font-size:large">βz</span>, where <span style="font-size:small">PRS = exp(Σ β<sup>.</sup>z)</span>',
+			linewidth: 1,
+			mirror: true
+		}
+	})
+
+	// add table
+	tabulateAllMatchByEffect()
+
+	
+    //debugger
+}
+
+function tabulateAllMatchByEffect(data=PGS23.data, div=document.getElementById('tabulateAllMatchByEffectDiv')) {
+	if(!div){
+		div = document.createElement('div')
+		document.body.appendChild(div)
+	}
+	div.innerHTML=''
+	// sort by absolute value
+	let jj = [...Array(data.calcRiskScore.length)].map((_,i)=>i)  // match indexes
+	let abs = data.calcRiskScore.map(x=>Math.abs(x))
+	jj.sort((a,b)=>(abs[b]-abs[a])) // indexes sorted by absolute value
+	// remove zero effect
+	//jj = jj.filter(x=>abs[x]>0)
+	// tabulate
+	let tb = document.createElement('table')
+	div.appendChild(tb)
+	let thead = document.createElement('thead')
+	tb.appendChild(thead)
+	thead.innerHTML=`<tr><th>#</th><th>B*z</th><th>variant</th><th>rsid</th></tr>`
+	let tbody = document.createElement('tbody')
+	tb.appendChild(tbody)
+	const indChr = data.pgs.cols.indexOf('hm_chr')
+    const indPos = data.pgs.cols.indexOf('hm_pos')
+	let indOther_allele = data.pgs.cols.indexOf('other_allele')
+	if(indOther_allele==-1){
+		indOther_allele = data.pgs.cols.indexOf('hm_inferOtherAllele')
+	}
+	const indEffect_allele = data.pgs.cols.indexOf('effect_allele')
+	jj.forEach(ind=>{
+		let row = document.createElement('tr')
+		tbody.appendChild(row)
+		let xi=data.pgsMatchMy23[ind]
+		row.innerHTML=`<tr><td>${ind}) </td><td>${data.calcRiskScore[ind]}</td><td>Chr${xi.at(-1)[indChr]}.${xi.at(-1)[indPos]}:${xi.at(-1)[indOther_allele]}>${xi.at(-1)[indEffect_allele]}</td><td>${xi[0][0]}</td></tr>`
+	})
+	
+	//debugger
+}
+
+// Hazard plots
+
+/*
+
+function plotHazardAllMatchByPos(data=PGS23.data, div=document.getElementById('plotAllMatchByPosDiv')) {
+	div.style.height='500px'
+    const indChr = data.pgs.cols.indexOf('hm_chr')
+    const indPos = data.pgs.cols.indexOf('hm_pos')
+	let indOther_allele = data.pgs.cols.indexOf('other_allele')
+	if(indOther_allele==-1){
+		indOther_allele = data.pgs.cols.indexOf('hm_inferOtherAllele')
+	}
+	const indEffect_allele = data.pgs.cols.indexOf('effect_allele')
+	const x = data.pgsMatchMy23.map(xi=>{
+        return `Chr${xi.at(-1)[indChr]}.${xi.at(-1)[indPos]}:${xi.at(-1)[indOther_allele]}>${xi.at(-1)[indEffect_allele]}
+		<br> <a href="#" target="_blank">${xi[0][0]}</a>`
+    }
+    )
+    const y = data.calcRiskScore
+    const z = data.aleles
+    const ii = [...Array(y.length)].map((_,i)=>i + 1)
+    let trace0 = {
+        x: ii,
+        y: y,
+		mode: 'markers',
+		type: 'scatter',
+		text: x,
+		marker: { 
+			size: 8,
+			color:'rgba(0,0,0,0)',
+			line:{
+				color:'navy',
+				width:1
+			}
+				}
+    }
+    div.innerHTML = ''
+    Plotly.newPlot(div, [trace0],{
+		//title:`${data.pgs.meta.trait_mapped}, PRS ${Math.round(data.PRS*1000)/1000}`
+		title:`<i style="color:navy">${data.pgs.meta.trait_mapped} (PGP#${data.pgs.meta.pgs_id.replace(/^.*0+/,'')}), PRS ${Math.round(data.PRS*1000)/1000}</i>
+			  <br><a href="${'https://doi.org/' + PGS23.pgsObj.meta.citation.match(/doi\:.*$/)[0]}" target="_blank"style="font-size:x-small">${data.pgs.meta.citation}</a>`,
+		xaxis:{
+			title:'variant sorted by chromossome and position',
+			linewidth: 1,
+			mirror: true,
+			rangemode: "tozero"
+		},
+		yaxis:{
+			title:'<span style="font-size:large">βz</span>, where <span style="font-size:small">PRS = exp(Σ β<sup>.</sup>z)</span>',
 			linewidth: 1,
 			mirror: true
 		}
 	})
     //debugger
 }
+
+function plotHazardAllMatchByEffect(data=PGS23.data, div=document.getElementById('plotAllMatchByEffectDiv')) {
+	div.style.height='500px'
+    const indChr = data.pgs.cols.indexOf('hm_chr')
+    const indPos = data.pgs.cols.indexOf('hm_pos')
+	let indOther_allele = data.pgs.cols.indexOf('other_allele')
+	if(indOther_allele==-1){
+		indOther_allele = data.pgs.cols.indexOf('hm_inferOtherAllele')
+	}
+	const indEffect_allele = data.pgs.cols.indexOf('effect_allele')
+	// sort by effect
+	let jj = [...Array(data.calcRiskScore.length)].map((_,i)=>i)  // match indexes
+	jj.sort((a,b)=>(data.calcRiskScore[a]-data.calcRiskScore[b]))
+	const x = data.pgsMatchMy23.map(xi=>{
+		return `Chr${xi.at(-1)[indChr]}.${xi.at(-1)[indPos]}:${xi.at(-1)[indOther_allele]}>${xi.at(-1)[indEffect_allele]}
+		<br> <a href="#" target="_blank">${xi[0][0]}</a>`
+    })
+    const y = data.calcRiskScore
+    const z = data.aleles
+    const ii = [...Array(y.length)].map((_,i)=>i + 1)
+    let trace0 = {
+        x: ii,
+        y: y.map((yi,i)=>y[jj[i]]),
+		mode: 'lines+markers',
+		type: 'scatter',
+		text: x,
+		marker: { 
+			size: 6,
+			color:'navy',
+			line:{
+				color:'navy',
+				width:1
+			}
+		},
+		line:{
+			color:'navy'
+		}
+		
+    }
+    div.innerHTML = ''
+    Plotly.newPlot(div, [trace0],{
+		//title:`${data.pgs.meta.trait_mapped}, PRS ${Math.round(data.PRS*1000)/1000}`
+		title:`<i style="color:navy">${data.pgs.meta.trait_mapped} (PGP#${data.pgs.meta.pgs_id.replace(/^.*0+/,'')}), PRS ${Math.round(data.PRS*1000)/1000}</i>
+			  <br><a href="${'https://doi.org/' + PGS23.pgsObj.meta.citation.match(/doi\:.*$/)[0]}" target="_blank"style="font-size:x-small">${data.pgs.meta.citation}</a>`,
+		xaxis:{
+			title:'variant sorted by effect',
+			linewidth: 1,
+			mirror: true,
+			rangemode: "tozero"
+		},
+		yaxis:{
+			title:'<span style="font-size:large">βz</span>, where <span style="font-size:small">PRS = exp(Σ β<sup>.</sup>z)</span>',
+			linewidth: 1,
+			mirror: true
+		}
+	})
+    //debugger
+}
+*/
+
 
 
 export {ui, PGS23, parsePGS, parse23, plotAllMatchByPos,plotAllMatchByEffect}
