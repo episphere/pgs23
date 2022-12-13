@@ -319,18 +319,24 @@ PGS23.Match2 = function(data, progressReport) {
             }
             )
             data.aleles = aleles
-            data.calcRiskScore = calcRiskScore
-            data.PRS = Math.exp(calcRiskScore.reduce((a,b)=>a + b))
-            document.getElementById('my23CalcTextArea').value += ` Polygenic Risk Score, PRS=${Math.round(data.PRS * 1000) / 1000}, calculated from ${data.pgsMatchMy23.length} PGS matches to the 23andme report.`
-            //my23CalcTextArea.value+=` ${data.pgsMatchMy23.length} PGS matches to the 23andme report.`
-
-            hidenCalc.hidden = false
-            document.querySelector('#buttonCalculateRisk').disabled = false
-            document.querySelector('#buttonCalculateRisk').style.color = 'blue'
-
-            //ploting
-            plotAllMatchByPos()
-			plotAllMatchByEffect()
+			if(calcRiskScore.reduce((a,b)=>Math.min(a,b))==0){
+				console.log('these are not betas :-(')
+				document.getElementById('my23CalcTextArea').value = `these are not betas ... try another entry. Maybe https://www.pgscatalog.org/search/?q=${data.pgs.meta.trait_mapped.replace(' ','+')} will help.`
+				document.getElementById('plotRiskDiv').hidden=true
+				document.getElementById('hidenCalc').hidden=true
+			}else{
+				data.calcRiskScore = calcRiskScore
+	            data.PRS = Math.exp(calcRiskScore.reduce((a,b)=>a + b))
+	            document.getElementById('my23CalcTextArea').value += ` Polygenic Risk Score, PRS=${Math.round(data.PRS * 1000) / 1000}, calculated from ${data.pgsMatchMy23.length} PGS matches to the 23andme report.`
+	            //my23CalcTextArea.value+=` ${data.pgsMatchMy23.length} PGS matches to the 23andme report.`
+				document.getElementById('plotRiskDiv').hidden=false
+	            document.getElementById('hidenCalc').hidden=false
+	            //ploting
+	            plotAllMatchByPos()
+				plotAllMatchByEffect()
+			}
+			document.querySelector('#buttonCalculateRisk').disabled = false
+			document.querySelector('#buttonCalculateRisk').style.color = 'blue'
         }
 
     }
