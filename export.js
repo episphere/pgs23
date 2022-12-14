@@ -177,7 +177,7 @@ PGS23.loadCalc = async()=>{
     </p>
 	<textarea id="my23CalcTextArea" style="background-color:black;color:lime" cols=60 rows=5>...</textarea>
 	<div id="plotRiskDiv"><div id="plotAllMatchByPosDiv">...</div><div id="plotAllMatchByEffectDiv">...</div></div>
-	<div>If you want to see the current state of the two data objects try <code>data = document.getElementById("PGS23calc").PGS23data</code> in the browser console</div>
+	<hr><div>If you want to see the current state of the two data objects try <code>data = document.getElementById("PGS23calc").PGS23data</code> in the browser console</div><hr>
 	<div id="tabulateAllMatchByEffectDiv"></div>
 	`
 
@@ -611,13 +611,13 @@ function tabulateAllMatchByEffect(data=PGS23.data, div=document.getElementById('
 	let abs = data.calcRiskScore.map(x=>Math.abs(x))
 	jj.sort((a,b)=>(abs[b]-abs[a])) // indexes sorted by absolute value
 	// remove zero effect
-	//jj = jj.filter(x=>abs[x]>0)
+	jj = jj.filter(x=>abs[x]>0)
 	// tabulate
 	let tb = document.createElement('table')
 	div.appendChild(tb)
 	let thead = document.createElement('thead')
 	tb.appendChild(thead)
-	thead.innerHTML=`<tr><th>#</th><th>B*z</th><th>variant</th><th>rsid</th></tr>`
+	thead.innerHTML=`<tr><th align="left">#</th><th align="left">B*z</th><th align="left">variant</th><th align="left">rsid</th></tr>`
 	let tbody = document.createElement('tbody')
 	tb.appendChild(tbody)
 	const indChr = data.pgs.cols.indexOf('hm_chr')
@@ -631,7 +631,7 @@ function tabulateAllMatchByEffect(data=PGS23.data, div=document.getElementById('
 		let row = document.createElement('tr')
 		tbody.appendChild(row)
 		let xi=data.pgsMatchMy23[ind]
-		row.innerHTML=`<tr><td>${ind}) </td><td>${data.calcRiskScore[ind]}</td><td>Chr${xi.at(-1)[indChr]}.${xi.at(-1)[indPos]}:${xi.at(-1)[indOther_allele]}>${xi.at(-1)[indEffect_allele]}</td><td>${xi[0][0]}</td></tr>`
+		row.innerHTML=`<tr><td align="left">${ind}) </td><td align="left">${Math.round(data.calcRiskScore[ind]*1000)/1000}</td><td align="left"><a href="https://myvariant.info/v1/variant/chr${xi.at(-1)[indChr]}:g.${xi.at(-1)[indPos]}${xi.at(-1)[indOther_allele]}>${xi.at(-1)[indEffect_allele]}" target="_blank">Chr${xi.at(-1)[indChr]}.${xi.at(-1)[indPos]}:${xi.at(-1)[indOther_allele]}>${xi.at(-1)[indEffect_allele]}</a></td><td align="left"><a href="https://www.ncbi.nlm.nih.gov/snp/${xi[0][0]}" target="_blank">${xi[0][0]}</a></td></tr>`
 	})
 	
 	//debugger
