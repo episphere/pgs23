@@ -511,8 +511,8 @@ function plotAllMatchByPos(data=PGS23.data, div=document.getElementById('plotAll
 		type: 'scatter',
 		text: x,
 		marker: { 
-			size: 8,
-			color:'rgba(0,0,0,0)',
+			size: 6,
+			color:'navy',
 			line:{
 				color:'navy',
 				width:1
@@ -551,7 +551,9 @@ function plotAllMatchByEffect(data=PGS23.data, div=document.getElementById('plot
 	// sort by effect
 	let jj = [...Array(data.calcRiskScore.length)].map((_,i)=>i)  // match indexes
 	jj.sort((a,b)=>(data.calcRiskScore[a]-data.calcRiskScore[b]))
-	const x = data.pgsMatchMy23.map(xi=>{
+	//const x = data.pgsMatchMy23.map(xi=>{
+	const x = jj.map(j=>{
+		let xi = data.pgsMatchMy23[j]
 		return `Chr${xi.at(-1)[indChr]}.${xi.at(-1)[indPos]}:${xi.at(-1)[indOther_allele]}>${xi.at(-1)[indEffect_allele]}
 		<br> <a href="#" target="_blank">${xi[0][0]}</a>`
     })
@@ -629,7 +631,9 @@ function tabulateAllMatchByEffect(data=PGS23.data, div=document.getElementById('
 		indOther_allele = data.pgs.cols.indexOf('hm_inferOtherAllele')
 	}
 	const indEffect_allele = data.pgs.cols.indexOf('effect_allele')
-	jj.forEach(ind=>{
+	let n = jj.length
+	jj.forEach((ind,i)=>{
+		//let jnd=n-ind
 		let row = document.createElement('tr')
 		tbody.appendChild(row)
 		let xi=data.pgsMatchMy23[ind]
