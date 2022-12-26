@@ -271,10 +271,17 @@ PGS23.Match2 = function(data, progressReport) {
     let progressCalc = document.getElementById('progressCalc')
     progressCalc.hidden = false
     let i = 0
-    function funMatch(i=0) {
+	let j = 0 //index of last match, the nex can match will have to be beyond this point since both pgs and 23and me are sorted by chr/position
+    //let matchFloor=0 // to advance the earliest match as it advances
+	function funMatch(i=0,matchFloor=0) {
         if (i < n) {
-            let r = data.pgs.dt[i]
-            let dtMatch_i = data.my23.dt.filter(myr=>(myr[2] == r[indPos])).filter(myr=>(myr[1] == r[indChr]))
+			let r = data.pgs.dt[i]
+			if (dtMatch.length > 0){
+				matchFloor=dtMatch.at(-1)[0][4]
+				//console.log(matchFloor)
+			}
+            //let dtMatch_i = data.my23.dt.filter(myr=>(myr[2] == r[indPos])).filter(myr=>(myr[1] == r[indChr]))
+			let dtMatch_i = data.my23.dt.slice(matchFloor).filter(myr=>(myr[2] == r[indPos])).filter(myr=>(myr[1] == r[indChr]))
             if (dtMatch_i.length > 0) {
                 dtMatch.push(dtMatch_i.concat([r]))
             }
@@ -321,7 +328,7 @@ PGS23.Match2 = function(data, progressReport) {
             )
             data.aleles = aleles
 			data.calcRiskScore = calcRiskScore
-			if((calcRiskScore.reduce((a,b)=>Math.min(a,b))==0)&&(calcRiskScore.reduce((a,b)=>Math.max(a,b))<=1)){ // hazard ratios?
+			if(calcRiskScore.reduce((a,b)=>Math.min(a,b))==0){//&&(calcRiskScore.reduce((a,b)=>Math.max(a,b))<=1)){ // hazard ratios?
 				console.log('these are not betas :-(')
 				document.getElementById('my23CalcTextArea').value += ` Found ${data.pgsMatchMy23.length} PGS matches to the 23andme report.`
 				//document.getElementById('my23CalcTextArea').value += ` However, these don't look like betas. I am going to assume they are hazard ratios ... You could also look for another entry for the same trait where betas were calculated, maybe give it a try at https://www.pgscatalog.org/search/?q=${data.pgs.meta.trait_mapped.replace(' ','+')}.`
@@ -455,10 +462,11 @@ function parse23(txt, info) {
     obj.meta = rows.slice(0, n - 1).join('\r\n')
     obj.cols = rows[n - 1].slice(2).split(/\t/)
     obj.dt = rows.slice(n)
-    obj.dt = obj.dt.map(r=>{
+    obj.dt = obj.dt.map((r,i)=>{
         r = r.split('\t')
         r[2] = parseInt(r[2])
         // position in the chr
+		r[4]=i
         return r
     }
     )
@@ -505,7 +513,7 @@ function plotAllMatchByPos(data=PGS23.data, div=document.getElementById('plotAll
     const z = data.aleles
     const ii = [...Array(y.length)].map((_,i)=>i)
     let trace0 = {
-        x: ii,
+        x: ii.map(i=>i+1),
         y: y,
 		mode: 'markers',
 		type: 'scatter',
@@ -561,7 +569,7 @@ function plotAllMatchByEffect(data=PGS23.data, div=document.getElementById('plot
     const z = data.aleles
     const ii = [...Array(y.length)].map((_,i)=>i)
     let trace0 = {
-        x: ii,
+        x: ii.map(i=>i+1),
         y: y.map((yi,i)=>y[jj[i]]),
 		mode: 'lines+markers',
 		type: 'scatter',
@@ -621,7 +629,7 @@ function tabulateAllMatchByEffect(data=PGS23.data, div=document.getElementById('
 	div.appendChild(tb)
 	let thead = document.createElement('thead')
 	tb.appendChild(thead)
-	thead.innerHTML=`<tr><th align="left">#</th><th align="left">ß*z</th><th align="left">variant</th><th align="left">SNP</th></tr>`
+	thead.innerHTML=`<tr><th align="left">#</th><th align="left">ß*z</th><th align="left">variant</th><th align="left">SNP</th><th align="left">aleles</th></tr>`
 	let tbody = document.createElement('tbody')
 	tb.appendChild(tbody)
 	const indChr = data.pgs.cols.indexOf('hm_chr')
@@ -637,7 +645,7 @@ function tabulateAllMatchByEffect(data=PGS23.data, div=document.getElementById('
 		let row = document.createElement('tr')
 		tbody.appendChild(row)
 		let xi=data.pgsMatchMy23[ind]
-		row.innerHTML=`<tr><td align="left">${ind}) </td><td align="left">${Math.round(data.calcRiskScore[ind]*1000)/1000}</td><td align="left" style="font-size:small;color:darkgreen"><a href="https://myvariant.info/v1/variant/chr${xi.at(-1)[indChr]}:g.${xi.at(-1)[indPos]}${xi.at(-1)[indOther_allele]}>${xi.at(-1)[indEffect_allele]}" target="_blank">Chr${xi.at(-1)[indChr]}.${xi.at(-1)[indPos]}:${xi.at(-1)[indOther_allele]}>${xi.at(-1)[indEffect_allele]}</a></td><td align="left"><a href="https://www.ncbi.nlm.nih.gov/snp/${xi[0][0]}" target="_blank">${xi[0][0]}</a></td></tr>`
+		row.innerHTML=`<tr><td align="left">${ind+1}) </td><td align="left">${Math.round(data.calcRiskScore[ind]*1000)/1000}</td><td align="left" style="font-size:small;color:darkgreen"><a href="https://myvariant.info/v1/variant/chr${xi.at(-1)[indChr]}:g.${xi.at(-1)[indPos]}${xi.at(-1)[indOther_allele]}>${xi.at(-1)[indEffect_allele]}" target="_blank">Chr${xi.at(-1)[indChr]}.${xi.at(-1)[indPos]}:g.${xi.at(-1)[indOther_allele]}>${xi.at(-1)[indEffect_allele]}</a></td><td align="left"><a href="https://www.ncbi.nlm.nih.gov/snp/${xi[0][0]}" target="_blank">${xi[0][0]}</a></td><td align="center">${xi[0][3]}</td></tr>`
 	})
 	
 	//debugger
