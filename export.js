@@ -558,7 +558,7 @@ function plotAllMatchByEffect(data=PGS23.data, div=document.getElementById('plot
 	const indEffect_allele = data.pgs.cols.indexOf('effect_allele')
 	// sort by effect
 	let jj = [...Array(data.calcRiskScore.length)].map((_,i)=>i)  // match indexes
-	jj.sort((a,b)=>(data.calcRiskScore[a]-data.calcRiskScore[b]))
+	jj.sort((a,b)=>(data.calcRiskScore[a]>data.calcRiskScore[b]?1:-1))
 	//const x = data.pgsMatchMy23.map(xi=>{
 	const x = jj.map(j=>{
 		let xi = data.pgsMatchMy23[j]
@@ -567,10 +567,12 @@ function plotAllMatchByEffect(data=PGS23.data, div=document.getElementById('plot
     })
     const y = data.calcRiskScore
     const z = data.aleles
-    const ii = [...Array(y.length)].map((_,i)=>i)
+    let ii = [...Array(y.length)].map((_,i)=>i)//.filter(i=>y[jj[i]]!=0)
+	ii = ii.filter(i=>y[jj[i]]) // removing indexes with null betas
     let trace0 = {
-        x: ii.map(i=>i+1),
-        y: y.map((yi,i)=>y[jj[i]]),
+        //x: ii.map(i=>i+1),
+        x: [...Array(ii.length)].map((_,i)=>i+1),
+		y: y.map((yi,i)=>y[jj[ii[i]]]),
 		mode: 'lines+markers',
 		type: 'scatter',
 		text: x,
@@ -593,7 +595,7 @@ function plotAllMatchByEffect(data=PGS23.data, div=document.getElementById('plot
 		title:`<i style="color:navy">${data.pgs.meta.trait_mapped} (PGP#${data.pgs.meta.pgs_id.replace(/^.*0+/,'')}), PRS ${Math.round(data.PRS*1000)/1000}</i>
 			  <br><a href="${'https://doi.org/' + PGS23.pgsObj.meta.citation.match(/doi\:.*$/)[0]}" target="_blank"style="font-size:x-small">${data.pgs.meta.citation}</a>`,
 		xaxis:{
-			title:'variant sorted by effect',
+			title:'variant sorted by non-null effect',
 			linewidth: 1,
 			mirror: true,
 			rangemode: "tozero"
@@ -621,15 +623,17 @@ function tabulateAllMatchByEffect(data=PGS23.data, div=document.getElementById('
 	// sort by absolute value
 	let jj = [...Array(data.calcRiskScore.length)].map((_,i)=>i)  // match indexes
 	let abs = data.calcRiskScore.map(x=>Math.abs(x))
-	jj.sort((a,b)=>(abs[b]-abs[a])) // indexes sorted by absolute value
+	//let abs = data.calcRiskScore
+	jj=jj.sort((a,b)=>(data.calcRiskScore[b]>data.calcRiskScore[a]?1:-1)) // indexes sorted by absolute value
+	//jj.sort((a,b)=>b>a?1:-1)
 	// remove zero effect
-	// jj = jj.filter(x=>abs[x]>0)
+	jj = jj.filter(x=>data.calcRiskScore[x]!=0)
 	// tabulate
 	let tb = document.createElement('table')
 	div.appendChild(tb)
 	let thead = document.createElement('thead')
 	tb.appendChild(thead)
-	thead.innerHTML=`<tr><th align="left">#</th><th align="left">ß*z</th><th align="left">variant</th><th align="right">SNP</th><th align="left">edia</th><th align="left">aleles</th></tr>`
+	thead.innerHTML=`<tr><th align="left">#</th><th align="left">rank</th><th align="left">ß*z</th><th align="left">variant</th><th align="middle">SNP</th><th align="left">pedia</th><th align="left">aleles</th></tr>`
 	let tbody = document.createElement('tbody')
 	tb.appendChild(tbody)
 	const indChr = data.pgs.cols.indexOf('hm_chr')
@@ -645,7 +649,8 @@ function tabulateAllMatchByEffect(data=PGS23.data, div=document.getElementById('
 		let row = document.createElement('tr')
 		tbody.appendChild(row)
 		let xi=data.pgsMatchMy23[ind]
-		row.innerHTML=`<tr><td align="left">${ind+1}) </td><td align="left">${Math.round(data.calcRiskScore[ind]*1000)/1000}</td><td align="left" style="font-size:small;color:darkgreen"><a href="https://myvariant.info/v1/variant/chr${xi.at(-1)[indChr]}:g.${xi.at(-1)[indPos]}${xi.at(-1)[indOther_allele]}>${xi.at(-1)[indEffect_allele]}" target="_blank">Chr${xi.at(-1)[indChr]}.${xi.at(-1)[indPos]}:g.${xi.at(-1)[indOther_allele]}>${xi.at(-1)[indEffect_allele]}</a></td><td align="left"><a href="https://www.ncbi.nlm.nih.gov/snp/${xi[0][0]}" target="_blank">${xi[0][0]}</a><td align="left"><a href="https://www.snpedia.com/index.php/${xi[0][0]}" target="_blank">wiki</a></td><td align="center">${xi[0][3]}</td></tr>`
+		row.innerHTML=`<tr><td align="left" style="font-size:small">${i+1
+}) </td><td align="left" style="font-size:small">(${ind+1}) </td><td align="left">${Math.round(data.calcRiskScore[ind]*1000)/1000}</td><td align="left" style="font-size:small;color:darkgreen"><a href="https://myvariant.info/v1/variant/chr${xi.at(-1)[indChr]}:g.${xi.at(-1)[indPos]}${xi.at(-1)[indOther_allele]}>${xi.at(-1)[indEffect_allele]}" target="_blank">Chr${xi.at(-1)[indChr]}.${xi.at(-1)[indPos]}:g.${xi.at(-1)[indOther_allele]}>${xi.at(-1)[indEffect_allele]}</a></td><td align="left"><a href="https://www.ncbi.nlm.nih.gov/snp/${xi[0][0]}" target="_blank">${xi[0][0]}</a><td align="left"><a href="https://www.snpedia.com/index.php/${xi[0][0]}" target="_blank">wiki</a></td><td align="center">${xi[0][3]}</td></tr>`
 	})
 	
 	//debugger
